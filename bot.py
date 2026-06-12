@@ -4,7 +4,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from scraper import run_scraper
 from parser import extract_leads, export_csv
 
-TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TOKEN = "8709408508:AAG9pAhrkerRJIWhYbiiSn2_wRMf4Mdzy34"
 
 
 def format_text(leads):
