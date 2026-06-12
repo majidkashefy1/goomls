@@ -1,15 +1,12 @@
 import os
 import subprocess
 import time
-
-OUTPUT_DIR = "output"
-QUERY_FILE = "queries.txt"
+from config import OUTPUT_DIR, QUERY_FILE, DOCKER_IMAGE
 
 
 def run_scraper(query: str):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # write query
     with open(QUERY_FILE, "w", encoding="utf-8") as f:
         f.write(query)
 
@@ -20,7 +17,7 @@ def run_scraper(query: str):
         "-v", "gmaps-cache:/opt",
         "-v", f"{os.getcwd()}/{QUERY_FILE}:/queries.txt:ro",
         "-v", f"{os.getcwd()}/{OUTPUT_DIR}:/out",
-        "gosom/google-maps-scraper",
+        DOCKER_IMAGE,
         "-input", "/queries.txt",
         "-results", "/out/results.csv",
         "-depth", "2",
@@ -29,6 +26,6 @@ def run_scraper(query: str):
 
     start = time.time()
     subprocess.run(cmd, check=True)
-    print(f"Scraping finished in {time.time() - start:.2f}s")
+    print(f"Scraping done in {time.time() - start:.2f}s")
 
     return csv_path
