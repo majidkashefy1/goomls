@@ -1,44 +1,58 @@
-import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 from scraper import run_scraper
-from parser import extract_leads
+from parser import extract_leads, export_csv
 
-TOKEN = "8709408508:AAG9pAhrkerRJIWhYbiiSn2_wRMf4Mdzy34"
+TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
 
 
-def format_results(leads):
+def format_text(leads):
     if not leads:
-        return "No results found."
+        return "No valid leads found."
 
-    msg = ""
-    for l in leads[:10]:
-        msg += f"""
-🏪 {l['name']}
-📞 {l['phone']}
-📍 {l['address']}
-----------------------
-"""
+    msg = "📊 Leads Found:\n\n"
+
+    for l in leads:
+        msg += (
+            f"🏪 {l.get('name','')}\n"
+            f"📞 {l.get('phone','')}\n"
+            f"📍 {l.get('address','')}\n"
+            f"---------------------\n"
+        )
+
     return msg
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Send me a place (e.g. coffee shop in Isfahan)")
+    await update.message.reply_text(
+        "Send a query like:\ncoffee shop in Chahar Bagh Isfahan"
+    )
 
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.message.text
 
     await update.message.reply_text("🔍 Searching Google Maps...")
 
     try:
         csv_path = run_scraper(query)
+
         leads = extract_leads(csv_path)
 
-        response = format_results(leads)
+        if not leads:
+            await update.message.reply_text("No results found.")
+            return
 
-        await update.message.reply_text(response)
+        # 1) text response
+        text = format_text(leads)
+        await update.message.reply_text(text)
+
+        # 2) export clean CSV
+        clean_path = export_csv(leads)
+
+        # 3) send file to telegram
+        await update.message.reply_document(document=open(clean_path, "rb"))
 
     except Exception as e:
         await update.message.reply_text(f"Error: {str(e)}")
@@ -46,10 +60,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = Application.builder().token(TOKEN).build()
-    app.run_polling()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
     print("Bot running...")
     app.run_polling()
